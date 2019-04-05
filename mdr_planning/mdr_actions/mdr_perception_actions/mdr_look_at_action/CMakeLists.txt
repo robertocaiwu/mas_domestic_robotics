@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(mdr_look_at_action)
 
 find_package(catkin REQUIRED COMPONENTS
+  std_msgs
   actionlib
   actionlib_msgs
   genmsg

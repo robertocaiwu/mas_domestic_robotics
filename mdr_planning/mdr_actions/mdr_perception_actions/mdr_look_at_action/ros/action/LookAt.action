@@ -1,6 +1,11 @@
 # goal definition
+sensor_msgs/Image image
+string object_location
 ---
 # result definition
 bool success
+bool object_in_frustum
 ---
 # feedback
+string current_state
+string message

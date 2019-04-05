@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+import rospy
+import actionlib
+
+from mdr_look_at_action.msg import LookAtAction
+from mdr_look_at_action.action_states import LookAtSM
+
+class LookAtServer(object):
+    '''A server exposing an action for turning to a specific point given the location of an object in the map.
+    * retry_count_on_failure: Number of times the search should be retried
+                              if it fails the first time
+    * timeout_s: Timeout (in seconds) for the action execution
+
+    @author Roberto Cai
+    @contact roberto.cai@smail.inf.h-brs.de
+
+    '''
+    def __init__(self):
+
+        object_position = rospy.get_param('~object_position', '')
+        camera_link_name = rospy.get_param('~camera_link_name', '')
+        retry_count_on_failure = int(rospy.get_param('~retry_count_on_failure', 0))
+        timeout_s = float(rospy.get_param('~timeout_s', 120.))
+        if not object_position:
+            rospy.logerr('[look_at] Object position not specified')
+
+        if not camera_link_name:
+            rospy.logerr('[look_at] Link name not specified')
+
+        rospy.loginfo('[look_at] Initialising state machine')
+        self.action_sm = LookAtSM(object_position=object_position,
+                                  link_name=camera_link_name,
+                                  number_of_retries=retry_count_on_failure,
+                                  timeout=timeout_s)
+        rospy.loginfo('[look_at] State machine initialised')
+
+        self.action_server = actionlib.SimpleActionServer('look_at_server',
+                                                          LookAtSM,
+                                                          self.execute, False)
+        self.action_server.start()
+        rospy.loginfo('look_at action server ready')
+
+    def execute(self, goal):
+        rospy.loginfo('[look_at] Received an action request')
+        self.action_sm.goal = goal
+        self.action_sm.result = None
+        self.action_sm.execution_requested = True
+        while not self.action_sm.result:
+            rospy.sleep(0.05)
+        self.action_server.set_succeeded(self.action_sm.result)
+
+if __name__ == '__main__':
+    rospy.init_node('look_at_server')
+    look_at_server = LookAtServer()
+    try:
+        look_at_server.action_sm.run()
+        while look_at_server.action_sm.is_running and not rospy.is_shutdown():
+            rospy.spin()
+    except (KeyboardInterrupt, SystemExit):
+        print('{0} interrupted; exiting...'.format(look_at_server.action_sm.name))
+        look_at_server.action_sm.stop()
